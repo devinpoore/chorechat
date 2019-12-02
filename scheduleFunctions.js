@@ -49,4 +49,4 @@ const scheduleFunctions = {
     }
 }
 
-export default scheduleFunctions;
+module.exports = scheduleFunctions;
