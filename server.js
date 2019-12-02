@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const schedule = require("node-schedule");
 const http = require("http");
 require("dotenv").config();
+const twilioClient = require("twilio")(process.env.accountSid, process.env.authToken);
 
 const PORT = process.env.PORT || 4500;
 
@@ -13,10 +14,10 @@ app.use(express.urlencoded({ extended: false }));
 const db = require("./models");
 
 // local mongo db connection
-// const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/chorechat";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/chorechat";
 
 // deployed mongo db connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
+// const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
     console.log("\nMongoose successfully connected to chorechat db\n");
@@ -24,45 +25,6 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
     console.log(err);
 });
 mongoose.set("useFindAndModify", false);
-
-const roomies = [
-    {
-        name: "Devin",
-        number: process.env.devin,
-        currentChore: 0,
-        choreComplete: false
-    },
-    {
-        name: "Peter",
-        number: process.env.peter,
-        currentChore: 2,
-        choreComplete: false
-    },
-    {
-        name: "Gabe",
-        number: process.env.gabe,
-        currentChore: 3,
-        choreComplete: false
-    },
-    {
-        name: "Brett",
-        number: process.env.brett,
-        currentChore: 4,
-        choreComplete: false
-    }
-];
-
-
-function seedRoomies() {
-    for (roomie of roomies) {
-        db.Roomie.create(roomie).then(roomieRes => {
-            console.log(roomieRes);
-        }).catch(err => console.log(err));
-    }
-}
-
-// seedRoomies();
-
 
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
 
@@ -82,14 +44,30 @@ app.post("/sms", (req, res) => {
 });
 
 const scheduleFunctions = require("./scheduleFunctions.js");
+const chores = require("./chores.js");
 
 // --------------------------------------------------------
 
 // const alertChoreRule = new schedule.RecurrenceRule();
 // alertChoreRule.dayOfWeek = 1;
-// alertChoreRule.hour = 8;
+// alertChoreRule.hour = 13;
+// alertChoreRule.minute = 10;
 
-// const alertChore = schedule.scheduleJob(alertChoreRule, scheduleFunctions.sendInitialChoreAlert);
+// const alertChore = schedule.scheduleJob(alertChoreRule, scheduleFunctions.sendInitialChoreAlert(client));
+
+const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, () => {
+    db.Roomie.find({"name": "Devin"}).then(dbRes => {
+        for (roomie of dbRes) {
+            const messageBody = scheduleFunctions.composeBody(chores, roomie);
+            console.log(messageBody);
+            twilioClient.messages.create({
+                body: messageBody,
+                from: process.env.twilioNum,
+                to: roomie.phoneNumber
+            }).then(message => console.log(message));
+        }
+    }).catch(err => console.log(err));
+});
 
 // ---------------------------------------------------------
 
@@ -99,6 +77,23 @@ const scheduleFunctions = require("./scheduleFunctions.js");
 
 // const updateChores = new schedule.scheduleJob(adjustChoreRule, scheduleFunctions.adjustChores);
 
+const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30}, () => {
+    db.Roomie.find({}).then(dbUpdateRes => {
+        console.log(dbUpdateRes);
+        for (roomie of dbUpdateRes) {
+            if (roomie.currentChore === 3) {
+                db.Roomie.findOneAndUpdate({"name": roomie.name}, {currentChore: 0}).then(res => {
+                    console.log(res);
+                }).catch(err => console.log(err));
+            } else {
+                db.Roomie.findOneAndUpdate({"name": roomie.name}, {currentChore: roomie.currentChore + 1}).then(res => {
+                    console.log(res);
+                }).catch(err => console.log(err));
+            }
+        }
+    }).catch(err => console.log(err));
+});
+
 // ---------------------------------------------------------
 
 // const choreReminderRule = new schedule.RecurrenceRule();
@@ -107,8 +102,20 @@ const scheduleFunctions = require("./scheduleFunctions.js");
 
 // const choreReminders = new schedule.scheduleJob(choreReminderRule, scheduleFunctions.determineReminder);
 
+const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 8, minute: 30}, () => {
+    db.Roomie.find({"choreComplete": false}).then(dbReminderRes => {
+        // console.log(dbReminderRes);
+        for (roomie of dbReminderRes) {
+            twilioClient.messages.create({
+                body: "Remember that your chore for the week is " + chores[roomie.currentChore].key + "\n\n-1301 Chorechat",
+                from: process.env.twilioNum,
+                to: roomie.phoneNumber
+            }).then(message => console.log(message));
+        }
+    }).catch(err => console.log(err));
+});
+
 //
 http.createServer(app).listen(PORT, () => {
-    console.log("Server listening on PORT " + PORT);
-    seedRoomies();
+    console.log("\nServer listening on PORT " + PORT);
 });

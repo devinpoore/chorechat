@@ -58,6 +58,6 @@ const chores = [
     //         "Check the fridge pickup schedule for recycling days"
     //     ]
     // }
-]
+];
 
 module.exports = chores;
