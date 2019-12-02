@@ -31,7 +31,7 @@ const roomies = [
         number: process.env.devin,
         currentChore: 0,
         choreComplete: false
-    }
+    },
     {
         name: "Peter",
         number: process.env.peter,
@@ -50,13 +50,18 @@ const roomies = [
         currentChore: 4,
         choreComplete: false
     }
-]
+];
 
-for (roomie of roomies) {
-    db.Roomie.create(roomie).then(roomieRes => {
-        console.log(roomieRes);
-    }).catch(err => console.log(err));
+
+function seedRoomies() {
+    for (roomie of roomies) {
+        db.Roomie.create(roomie).then(roomieRes => {
+            console.log(roomieRes);
+        }).catch(err => console.log(err));
+    }
 }
+
+// seedRoomies();
 
 
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
@@ -105,4 +110,5 @@ const scheduleFunctions = require("./scheduleFunctions.js");
 //
 http.createServer(app).listen(PORT, () => {
     console.log("Server listening on PORT " + PORT);
+    seedRoomies();
 });
