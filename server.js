@@ -14,10 +14,10 @@ app.use(express.urlencoded({ extended: false }));
 const db = require("./models");
 
 // local mongo db connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/chorechat";
+// const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/chorechat";
 
 // deployed mongo db connection
-// const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
     console.log("\nMongoose successfully connected to chorechat db\n");
