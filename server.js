@@ -19,12 +19,14 @@ const db = require("./models");
 // deployed mongo db connection
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
 
+// TODO: Look into {'useUnifiedTopology': true} - shows up in Heroku deploy logs
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
     console.log("\nMongoose successfully connected to chorechat db\n");
 }).catch(err => {
     console.log(err);
 });
 mongoose.set("useFindAndModify", false);
+// mongoose.set("useUnifiedTopology", true);
 
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
 
@@ -56,7 +58,7 @@ const chores = require("./chores.js");
 // const alertChore = schedule.scheduleJob(alertChoreRule, scheduleFunctions.sendInitialChoreAlert(client));
 
 const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, () => {
-    db.Roomie.find({"name": "Devin"}).then(dbRes => {
+    db.Roomie.find({}).then(dbRes => {
         for (roomie of dbRes) {
             const messageBody = scheduleFunctions.composeBody(chores, roomie);
             console.log(messageBody);
@@ -82,6 +84,7 @@ const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30
         console.log(dbUpdateRes);
         for (roomie of dbUpdateRes) {
             if (roomie.currentChore === 3) {
+                // maybe refactor this with a ternary
                 db.Roomie.findOneAndUpdate({"name": roomie.name}, {currentChore: 0}).then(res => {
                     console.log(res);
                 }).catch(err => console.log(err));
