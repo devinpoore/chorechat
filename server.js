@@ -26,7 +26,7 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
     console.log(err);
 });
 mongoose.set("useFindAndModify", false);
-// mongoose.set("useUnifiedTopology", true);
+mongoose.set("useUnifiedTopology", true);
 
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
 
@@ -79,12 +79,25 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, ()
     }).catch(err => console.log(err));
 });
 
-const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 7, minute: 34}, () => {
+const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 14, minute: 30}, () => {
     db.Roomie.find({"name": "Devin"}).then(dbDevin => {
         console.log(dbDevin);
         for (roomie of dbDevin) {
             twilioClient.messages.create({
                 body: "testing...\n\n-1301 Chorechat",
+                from: process.env.twilioNum,
+                to: roomie.phoneNumber
+            }).then(message => console.log(message));
+        }
+    });
+});
+
+const testAlert2 = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 30}, () => {
+    db.Roomie.find({"name": "Devin"}).then(dbDevin => {
+        console.log(dbDevin);
+        for (roomie of dbDevin) {
+            twilioClient.messages.create({
+                body: "testing #2...\n\n-1301 Chorechat",
                 from: process.env.twilioNum,
                 to: roomie.phoneNumber
             }).then(message => console.log(message));
