@@ -79,6 +79,19 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, ()
     }).catch(err => console.log(err));
 });
 
+const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 7, minute: 34}, () => {
+    db.Roomie.find({"name": "Devin"}).then(dbDevin => {
+        console.log(dbDevin);
+        for (roomie of dbDevin) {
+            twilioClient.messages.create({
+                body: "testing...\n\n-1301 Chorechat",
+                from: process.env.twilioNum,
+                to: roomie.phoneNumber
+            }).then(message => console.log(message));
+        }
+    });
+});
+
 // ---------------------------------------------------------
 
 // const adjustChoreRule = new schedule.RecurrenceRule();
