@@ -79,7 +79,7 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, ()
     }).catch(err => console.log(err));
 });
 
-const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 14, minute: 30}, () => {
+const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 14, minute: 35}, () => {
     db.Roomie.find({"name": "Devin"}).then(dbDevin => {
         console.log(dbDevin);
         for (roomie of dbDevin) {
@@ -92,7 +92,7 @@ const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 14, minute: 30}, () 
     });
 });
 
-const testAlert2 = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 30}, () => {
+const testAlert2 = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 35}, () => {
     db.Roomie.find({"name": "Devin"}).then(dbDevin => {
         console.log(dbDevin);
         for (roomie of dbDevin) {
@@ -156,3 +156,8 @@ const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 8, min
 http.createServer(app).listen(PORT, () => {
     console.log("\nServer listening on PORT " + PORT);
 });
+
+// ping chorechat every 5 minutes to keep server running
+setInterval(() => {
+    http.get("https://chorechat.herokuapp.com/");
+}, 300000);
