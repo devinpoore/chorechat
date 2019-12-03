@@ -45,6 +45,10 @@ app.post("/sms", (req, res) => {
     res.end();
 });
 
+app.get("/", (req, res) => {
+    res.send("<h2 style='font-family:monospace;font-weight:500;'>chorechat v0.2</h2>");
+});
+
 const scheduleFunctions = require("./scheduleFunctions.js");
 const chores = require("./chores.js");
 
