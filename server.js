@@ -1,7 +1,11 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const schedule = require("node-schedule");
+
+const http = require("http");
+
 const https = require("https");
+
 require("dotenv").config();
 const twilioClient = require("twilio")(process.env.accountSid, process.env.authToken);
 
@@ -79,8 +83,9 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, ()
     }).catch(err => console.log(err));
 });
 
-const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 14, minute: 35}, () => {
+const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 45}, () => {
     db.Roomie.find({"name": "Devin"}).then(dbDevin => {
+        console.log("Testing...\n");
         console.log(dbDevin);
         for (roomie of dbDevin) {
             twilioClient.messages.create({
@@ -92,18 +97,18 @@ const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 14, minute: 35}, () 
     });
 });
 
-const testAlert2 = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 35}, () => {
-    db.Roomie.find({"name": "Devin"}).then(dbDevin => {
-        console.log(dbDevin);
-        for (roomie of dbDevin) {
-            twilioClient.messages.create({
-                body: "testing #2...\n\n-1301 Chorechat",
-                from: process.env.twilioNum,
-                to: roomie.phoneNumber
-            }).then(message => console.log(message));
-        }
-    });
-});
+// const testAlert2 = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 31}, () => {
+//     db.Roomie.find({"name": "Devin"}).then(dbDevin => {
+//         console.log(dbDevin);
+//         for (roomie of dbDevin) {
+//             twilioClient.messages.create({
+//                 body: "testing #2...\n\n-1301 Chorechat",
+//                 from: process.env.twilioNum,
+//                 to: roomie.phoneNumber
+//             }).then(message => console.log(message));
+//         }
+//     });
+// });
 
 // ---------------------------------------------------------
 
@@ -153,11 +158,12 @@ const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 8, min
 });
 
 //
-https.createServer(app).listen(PORT, () => {
+http.createServer(app).listen(PORT, () => {
     console.log("\nServer listening on PORT " + PORT);
 });
 
 // ping chorechat every 5 minutes to keep server running
 setInterval(() => {
+    console.log("pinging chorechat...\n");
     https.get("https://chorechat.herokuapp.com/");
 }, 300000);
