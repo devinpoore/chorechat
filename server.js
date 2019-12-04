@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const schedule = require("node-schedule");
-const http = require("http");
+const https = require("https");
 require("dotenv").config();
 const twilioClient = require("twilio")(process.env.accountSid, process.env.authToken);
 
@@ -153,11 +153,11 @@ const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 8, min
 });
 
 //
-http.createServer(app).listen(PORT, () => {
+https.createServer(app).listen(PORT, () => {
     console.log("\nServer listening on PORT " + PORT);
 });
 
 // ping chorechat every 5 minutes to keep server running
 setInterval(() => {
-    http.get("https://chorechat.herokuapp.com/");
+    https.get("https://chorechat.herokuapp.com/");
 }, 300000);
