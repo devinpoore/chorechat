@@ -1,3 +1,5 @@
+// TODO: Generalize the error catch function and replace in all db calls
+
 const express = require("express");
 const mongoose = require("mongoose");
 const schedule = require("node-schedule");
@@ -59,7 +61,7 @@ const scheduleFunctions = require("./scheduleFunctions.js");
 const chores = require("./chores.js");
 
 // Send out the initial weekly chore duties to each roommate
-const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, () => {
+const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 8, minute: 30}, () => {
     db.Roomie.find({}).then(dbRes => {
         for (roomie of dbRes) {
             const messageBody = scheduleFunctions.composeBody(chores, roomie);
@@ -73,38 +75,9 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 2, hour: 8, minute: 30}, ()
     }).catch(err => console.log(err));
 });
 
-// Just testing
-const testAlert = schedule.scheduleJob({dayOfWeek: 2, hour: 18, second: 45}, () => {
-    // db.Roomie.find({"name": "Devin"}).then(dbDevin => {
-    //     console.log("Testing...\n");
-    //     console.log(dbDevin);
-    //     for (roomie of dbDevin) {
-    //         twilioClient.messages.create({
-    //             body: "testing...\n\n-1301 Chorechat",
-    //             from: process.env.twilioNum,
-    //             to: roomie.phoneNumber
-    //         }).then(message => console.log(message));
-    //     }
-    // });
-    console.log("\ntest alert firing every minute...\n");
-});
-
-//
-// const testAlert2 = schedule.scheduleJob({dayOfWeek: 2, hour: 16, minute: 31}, () => {
-//     db.Roomie.find({"name": "Devin"}).then(dbDevin => {
-//         console.log(dbDevin);
-//         for (roomie of dbDevin) {
-//             twilioClient.messages.create({
-//                 body: "testing #2...\n\n-1301 Chorechat",
-//                 from: process.env.twilioNum,
-//                 to: roomie.phoneNumber
-//             }).then(message => console.log(message));
-//         }
-//     });
-// });
-
 // Rotate the chore duty list each Monday before the new chore notification is sent
-const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30}, () => {
+// TODO: Break the second database update into its own distinct portion of code using async await instead of nesting
+const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30}, () => {    
     db.Roomie.find({}).then(dbUpdateRes => {
         console.log(dbUpdateRes);
         for (roomie of dbUpdateRes) {
@@ -119,6 +92,9 @@ const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30
                 }).catch(err => console.log(err));
             }
         }
+        db.Roomie.updateMany({ "choreComplete": true }, { "choreComplete": false }, { "multi": true }).then(updateRes => {
+            console.log(updateRes);
+        }).catch(err => console.log(err));
     }).catch(err => console.log(err));
 });
 
