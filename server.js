@@ -22,6 +22,7 @@ const db = require("./models");
 // const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/chorechat";
 
 // deployed mongo db connection
+// TODO: Uncomment deployed mongo link
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
@@ -34,14 +35,34 @@ mongoose.set("useUnifiedTopology", true);
 
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
 
-app.post("/sms", (req, res) => {
+const chores = require("./chores.js");
+
+app.post("/sms", async (req, res) => {
+
+    // console.log(req.body);
+
     if (req.body.Body.toLowerCase() === "done") {
-        db.Roomie.findOneAndUpdate({ phoneNumber: req.body.From }, { choreComplete: true }).then(dbRes => {
-            console.log(dbRes);
+        // series of actions are executed
+        //
+        // change the sender's chore status to done - DONE
+        // increment their points by the appropriate amount - 
+        // notify other roommates of chore completion - DONE
+
+        let setCompletersName = "";
+        let setChore = -1;
+
+        await db.Roomie.findOneAndUpdate({ phoneNumber: req.body.From }, { choreComplete: true }).then(dbRes => {
+            // console.log(dbRes);
+            setCompletersName = dbRes.name;
+            setChore = dbRes.currentChore;
         }).catch(err => console.log(err));
+
+        // console.log(setCompletersName, setChore);
 
         const twiml = new MessagingResponse();
         twiml.message("\nThanks for helping to keep the Taj Mahal tidy!\n\nSee you next week!\n\n-1301 Chorechat");
+
+        notifyRoomies(req.body.From, setChore, setCompletersName);
 
         res.writeHead(200, { "Content-Type": "text/xml" });
         res.end(twiml.toString());
@@ -49,16 +70,41 @@ app.post("/sms", (req, res) => {
     res.end();
 });
 
+// TODO: Clean up console logs when thoroughly tested
+const notifyRoomies = (phoneNumber, chore, completersName) => {
+    // figure out the right query to avoid the 'if' below
+    const completionMessage = completersName + " has marked their chore, " + chores[chore].key + " DUTY, complete\n\n-1301 Chorechat";
+
+    // console.log(completionMessage);
+
+    db.Roomie.find({}).then(dbRes => {
+        for (roomie of dbRes) {
+            if (roomie.phoneNumber !== phoneNumber) {
+
+                // console.log("Sending completion message to " + roomie.name);
+
+                // send completionMessage
+                twilioClient.messages.create({
+                    body: completionMessage,
+                    from: process.env.twilioNum,
+                    to: roomie.phoneNumber
+                })
+                //.then(message => console.log(message))
+                .catch(err => console.log(err));
+            }
+        }
+    }).catch(err => console.log(err));
+}
+
 app.get("/", (req, res) => {
     res.send("<h2 style='font-family:monospace;font-weight:500;'>chorechat v0.2</h2>");
 });
 
-app.get("*", (req,res) => {
+app.get("*", (req, res) => {
     res.redirect("/");
 });
 
 const scheduleFunctions = require("./scheduleFunctions.js");
-const chores = require("./chores.js");
 
 // Send out the initial weekly chore duties to each roommate
 const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 8, minute: 30}, () => {
@@ -79,8 +125,18 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 8, minute: 30}, ()
 // TODO: Break the second database update into its own distinct portion of code using async await instead of nesting
 const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30}, () => {    
     db.Roomie.find({}).then(dbUpdateRes => {
+        
+        
         console.log(dbUpdateRes);
         for (roomie of dbUpdateRes) {
+            
+            // if (roomie.choreComplete === false) {
+
+                // send them a shame bell gif and a message saying the high sparrow disapproves
+                // do we want to track weekly streaks?
+
+            // }
+
             if (roomie.currentChore === 3) {
                 // maybe refactor this with a ternary
                 db.Roomie.findOneAndUpdate({"name": roomie.name}, {currentChore: 0}).then(res => {
@@ -104,7 +160,7 @@ const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 8, min
         // console.log(dbReminderRes);
         for (roomie of dbReminderRes) {
             twilioClient.messages.create({
-                body: "Remember that your chore for the week is " + chores[roomie.currentChore].key + "\n\n-1301 Chorechat",
+                body: "Remember that your chore for the week is " + chores[roomie.currentChore].key + " DUTY\n\n-1301 Chorechat",
                 from: process.env.twilioNum,
                 to: roomie.phoneNumber
             }).then(message => console.log(message));
