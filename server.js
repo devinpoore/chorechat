@@ -106,18 +106,154 @@ app.get("*", (req, res) => {
 
 const scheduleFunctions = require("./scheduleFunctions.js");
 
+//-------------------------------------------------------------------------
+
+const buildWeeklyReport = (dbObj) => {
+    let report = "1301 chorechat weekly report\n\n";
+    
+    var high_points = dbObj[0].points;
+
+    var medal = 0;
+    const medals = ["🥇 ", "🥈 ", "🥉 ", "◻ "]
+
+    for (roomie of dbObj) {                
+        var roomieString = "";        
+        if (roomie.points === high_points) {
+            roomieString+=medals[medal];
+        } else {           
+            if ((medal + 1) <= 3) {
+                medal++;
+            }
+            roomieString+=medals[medal];
+            high_points = roomie.points;
+        }
+        roomieString+=`${roomie.name} - ${roomie.points} ${roomie.points === 1 ? "pt" : "pts"} | ${roomie.point_delta === -3 ? "❌" : "✅"} | ${roomie.point_delta > -1 ? "+" : ""}${roomie.point_delta}\n`;
+        roomieString+="--------------------------------------------\n";
+        report+=roomieString;
+    }
+
+    return report;
+}
+
+const composeRoomieChores = (dbObj, roomie) => {
+    const currRoomie = roomie.name;
+    var roomieChores = "Weekly Roommate Chores:\n-----------------------------\n";
+    // there's a better way to do this
+    for (roommate of dbObj) {
+        if (roommate.name !== currRoomie) {
+            roomieChores+=`${roommate.name} - ${chores[roommate.currentChore].key} DUTY\n`;
+        }
+    };
+    console.log(roomieChores);
+    return roomieChores;
+}
+
+const testFunc = () => {
+    db.Roomie.find({}).sort({ points: "desc" }).then( async (dbRes) => {    
+        // console.log(dbRes);
+        const messageBody = scheduleFunctions.composeBody(chores, dbRes[0]);
+        const roomieChores = composeRoomieChores(dbRes, dbRes[0]);
+        const weeklyReport = buildWeeklyReport(dbRes);
+
+        // Send new weekly duty details
+        await twilioClient.messages.create({
+            body: messageBody,
+            from: process.env.twilioNum,
+            to: process.env.devin
+        }).then(message => console.log(message));
+
+        // Send other roommate chores
+        await twilioClient.messages.create({
+            body: roomieChores,
+            from: process.env.twilioNum,
+            to: process.env.devin
+        }).then(message => console.log(message));
+
+        // Send weekly report
+        await twilioClient.messages.create({
+            body: weeklyReport,
+            from: process.env.twilioNum,
+            to: process.env.devin
+        }).then(message => console.log(message));
+
+    }).catch(err => console.log(err));
+}
+
+// testFunc();
+
+//-------------------------------------------------------------------------
+
 // Send out the initial weekly chore duties to each roommate
 const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 8, minute: 30}, () => {
-    db.Roomie.find({}).then(dbRes => {
+
+    const buildWeeklyReport = (dbObj) => {
+        let report = "1301 CHORECHAT WEEKLY REPORT\n\n";
+        
+        var high_points = dbObj[0].points;
+    
+        var medal = 0;
+        const medals = ["🥇 ", "🥈 ", "🥉 ", "◻ "]
+    
+        for (roomie of dbObj) {                
+            var roomieString = "";        
+            if (roomie.points === high_points) {
+                roomieString+=medals[medal];
+            } else {           
+                if ((medal + 1) <= 3) {
+                    medal++;
+                }
+                roomieString+=medals[medal];
+                high_points = roomie.points;
+            }
+            roomieString+=`${roomie.name} - ${roomie.points} ${roomie.points === 1 ? "pt" : "pts"} | ${roomie.point_delta === -3 ? "❌" : "✅"} | ${roomie.point_delta > -1 ? "+" : ""}${roomie.point_delta}\n`;
+            roomieString+="--------------------------------------------\n";
+            report+=roomieString;
+        }
+    
+        return report;
+    }
+
+    const composeRoomieChores = (dbObj, roomie) => {
+        const currRoomie = roomie.name;
+        var roomieChores = "Weekly Roommate Chores:\n-----------------------------\n";
+        // there's a better way to do this
+        for (roommate of dbObj) {
+            if (roommate.name !== currRoomie) {
+                roomieChores+=`${roommate.name} - ${chores[roommate.currentChore].key} DUTY\n`;
+            }
+        };
+        return roomieChores;
+    }
+
+    db.Roomie.find({}).sort({ points: "desc" }).then( async (dbRes) => {
+        const weeklyReport = buildWeeklyReport(dbRes);
+
         for (roomie of dbRes) {
             const messageBody = scheduleFunctions.composeBody(chores, roomie);
-            console.log(messageBody);
-            twilioClient.messages.create({
+            const roomieChores = composeRoomieChores(dbRes, roomie);
+
+            // Send new weekly duty details
+            await twilioClient.messages.create({
                 body: messageBody,
                 from: process.env.twilioNum,
                 to: roomie.phoneNumber
             }).then(message => console.log(message));
+
+            // Send other roommate chores
+            await twilioClient.messages.create({
+                body: roomieChores,
+                from: process.env.twilioNum,
+                to: roomie.phoneNumber
+            }).then(message => console.log(message));
+
+            // Send weekly report
+            await twilioClient.messages.create({
+                body: weeklyReport,
+                from: process.env.twilioNum,
+                to: roomie.phoneNumber
+            }).then(message => console.log(message));
         }
+
     }).catch(err => console.log(err));
 });
 

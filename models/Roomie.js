@@ -18,6 +18,16 @@ const RoomieSchema = new Schema({
     choreComplete: {
         type: Boolean,
         require: true
+    },
+    points: {
+        type: Number,
+        require: true,
+        default: 0
+    },
+    point_delta: {
+        type: Number,
+        require: true,
+        default: 0
     }
 });
 
