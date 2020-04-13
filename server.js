@@ -1,8 +1,12 @@
-// TODO: Generalize the error catch function and replace in all db calls
+// TODO: Generalize the error catch function and replace in all db calls - great note, now execute
 
+// const express = require("express");
 const express = require("express");
+
 const mongoose = require("mongoose");
 const schedule = require("node-schedule");
+const moment = require("moment");
+moment().format();
 
 const http = require("http");
 const https = require("https");
@@ -23,6 +27,8 @@ const db = require("./models");
 
 // deployed mongo db connection
 // TODO: Uncomment deployed mongo link
+
+// TODO: for production, the mongoURI should always be an environment variable, never stored to the repo history
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://" + process.env.mongoUser + ":" + process.env.mongoPW + "@ds251158.mlab.com:51158/heroku_5npspkxg";
 
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true }).then(() => {
@@ -39,19 +45,28 @@ const chores = require("./chores.js");
 
 app.post("/sms", async (req, res) => {
 
-    // console.log(req.body);
+    console.log(req.body);
 
     if (req.body.Body.toLowerCase() === "done") {
-        // series of actions are executed
-        //
-        // change the sender's chore status to done - DONE
-        // increment their points by the appropriate amount - 
-        // notify other roommates of chore completion - DONE
 
         let setCompletersName = "";
         let setChore = -1;
 
-        await db.Roomie.findOneAndUpdate({ phoneNumber: req.body.From }, { choreComplete: true }).then(dbRes => {
+        // const currDay = moment().day();
+        // let point_delta = 0;
+
+        // if (currDay === 0) {
+        //     point_delta = 0;
+        // } else if (currDay <= 3) {
+        //     point_delta = 3;
+        // } else if (currDay <= 6) {
+        //     point_delta = 1;
+        // }
+
+        await db.Roomie.findOneAndUpdate(
+            { phoneNumber: req.body.From },
+            { choreComplete: true }
+        ).then(dbRes => {
             // console.log(dbRes);
             setCompletersName = dbRes.name;
             setChore = dbRes.currentChore;
@@ -184,7 +199,7 @@ const testFunc = () => {
 //-------------------------------------------------------------------------
 
 // Send out the initial weekly chore duties to each roommate
-const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 8, minute: 30}, () => {
+const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 15, minute: 30}, () => {
 
     const buildWeeklyReport = (dbObj) => {
         let report = "1301 CHORECHAT WEEKLY REPORT\n\n";
@@ -259,7 +274,7 @@ const alertChores = schedule.scheduleJob({dayOfWeek: 1, hour: 8, minute: 30}, ()
 
 // Rotate the chore duty list each Monday before the new chore notification is sent
 // TODO: Break the second database update into its own distinct portion of code using async await instead of nesting
-const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30}, () => {    
+const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 13, minute: 30}, () => {    
     db.Roomie.find({}).then(dbUpdateRes => {
         
         
@@ -291,7 +306,7 @@ const updateChores = new schedule.scheduleJob({dayOfWeek: 1, hour: 6, minute: 30
 });
 
 // Send sms reminder to any roommate who hasn't completed their chore on Thursday and Sunday
-const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 8, minute: 30}, () => {
+const choreReminders = new schedule.scheduleJob({dayOfWeek: [0, 4], hour: 15, minute: 30}, () => {
     db.Roomie.find({"choreComplete": false}).then(dbReminderRes => {
         // console.log(dbReminderRes);
         for (roomie of dbReminderRes) {
